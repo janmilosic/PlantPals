@@ -9,6 +9,8 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "lint": "eslint .",
+    "test": "jest",
+    "test:cov": "jest --coverage",
     "start:prod": "node dist/main"
   },
   "dependencies": {
@@ -33,11 +35,26 @@
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
     "eslint": "^10.15.0",
     "globals": "^17.14.0",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.73.0"
+  },
+    "jest": {
+    "moduleFileExtensions": ["js", "json", "ts"],
+    "rootDir": "src",
+    "testRegex": ".*\\.spec\\.ts$",
+    "transform": {
+      "^.+\\.ts$": "ts-jest"
+    },
+    "collectCoverageFrom": ["**/*.ts", "!main.ts", "!**/*.module.ts"],
+    "coverageDirectory": "../coverage",
+    "coverageReporters": ["text", "html", "lcov"],
+    "testEnvironment": "node"
   }
 }
