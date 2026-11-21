@@ -12,10 +12,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Prenos kode
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Namestitev Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -38,3 +38,52 @@ jobs:
       - name: Frontend lint
         working-directory: frontend
         run: npm run lint
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prenos kode
+        uses: actions/checkout@v7
+
+      - name: Namestitev Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Backend namestitev odvisnosti
+        working-directory: backend
+        run: npm ci
+
+      - name: Backend gradnja
+        working-directory: backend
+        run: npm run build
+
+      - name: Frontend namestitev odvisnosti
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend - gradnja
+        working-directory: frontend
+        run: npm run build
+
+      - name: Shrani artefakt backenda
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-build
+          path: |
+            backend/dist
+            backend/package.json
+            backend/package-lock.json
+          retention-days: 7
+
+      - name: Shrani artefakt frontenda
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-build
+          path: frontend/dist
+          retention-days: 7
