@@ -67,8 +67,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
-      - name: Frontend - gradnja
+      - name: Frontend gradnja
         working-directory: frontend
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://localhost:3000/api' }}
         run: npm run build
 
       - name: Shrani artefakt backenda
@@ -129,3 +131,59 @@ jobs:
             backend/coverage
             frontend/coverage
           retention-days: 7
+
+  deploy:
+    name: deploy
+    needs: [lint, build, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    env:
+      IMAGE: ghcr.io/janmilosic/plantpals-api
+    steps:
+      - name: Prenos kode
+        uses: actions/checkout@v7
+
+      - name: Prenos artefakta backenda
+        uses: actions/download-artifact@v8
+        with:
+          name: backend-build
+          path: backend-build
+
+      - name: Prenos artefakta frontenda
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-build
+          path: frontend-dist
+
+      - name: Prijava v GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Backend priprava in objava Docker slike
+        run: |
+          docker build -f backend/Dockerfile.deploy -t $IMAGE:${{ github.sha }} -t $IMAGE:latest backend-build
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+
+      - name: Backend namestitev na Render
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "RENDER_DEPLOY_HOOK_URL ni nastavljen, namestitev backenda preskočena."
+            exit 0
+          fi
+          curl -fsS -G "$RENDER_DEPLOY_HOOK_URL" --data-urlencode "imgURL=$IMAGE:${{ github.sha }}"
+
+      - name: Frontend namestitev na Netlify
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        run: npx --yes netlify-cli deploy --dir frontend-dist --prod --no-build --auth "$NETLIFY_AUTH_TOKEN" --site "$NETLIFY_SITE_ID"
