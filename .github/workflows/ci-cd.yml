@@ -87,3 +87,45 @@ jobs:
           name: frontend-build
           path: frontend/dist
           retention-days: 7
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prenos kode
+        uses: actions/checkout@v7
+
+      - name: Namestitev Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Backend namestitev odvisnosti
+        working-directory: backend
+        run: npm ci
+
+      - name: Backend testi s pokritostjo
+        working-directory: backend
+        run: npm run test:cov
+
+      - name: Frontend namestitev odvisnosti
+        working-directory: frontend
+        run: npm ci
+
+      - name: Frontend testi s pokritostjo
+        working-directory: frontend
+        run: npm run test:cov
+
+      - name: Shrani poročilo o pokritosti
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-report
+          path: |
+            backend/coverage
+            frontend/coverage
+          retention-days: 7
